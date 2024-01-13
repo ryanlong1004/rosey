@@ -1,3 +1,5 @@
+"""cleans up Download directory folder on most OS's"""
+
 # Importing necessary modules
 import os
 import time
@@ -74,4 +76,5 @@ def archive(age, dryrun):
 
 
 if __name__ == "__main__":
+    # pylint: disable=no-value-for-parameter
     archive()
