@@ -16,7 +16,15 @@ DAY = HOUR * 24
 
 ROOT = os.path.dirname(os.path.realpath(__file__))
 
-logger.add(os.path.join(ROOT, "LOG"), level="INFO", colorize=False, backtrace=True)
+DOWNLOAD_DIRECTORY = Path(os.path.join(Path.home(), "Downloads"))
+
+logger.remove()
+logger.add(
+    os.path.join(DOWNLOAD_DIRECTORY, "LOG"),
+    level="INFO",
+    colorize=False,
+    backtrace=True,
+)
 
 
 def remove(_path: Path) -> None:
@@ -34,7 +42,8 @@ def get_str_date(ts):
 
 def get_download_directory():
     """returns path of home directory"""
-    return Path(os.path.join(Path.home(), "Downloads"))
+
+    return DOWNLOAD_DIRECTORY
 
 
 def get_folder_items(_path: Path) -> List[Path]:
@@ -55,12 +64,13 @@ def main():
     logger.info("starting")
     archivable = [
         item
-        for item in tqdm(get_folder_items(get_download_directory()))
+        for item in get_folder_items(get_download_directory())
         if is_archivable(item)
     ]
 
-    with ZipFile("archive.zip", "w") as myzip:
-        for _file in archivable:
+    archive_path = os.path.join(get_download_directory(), "archive.zip")
+    with ZipFile(archive_path, "w") as myzip:
+        for _file in tqdm(archivable):
             logger.info(f"writing {_file} to zip")
             myzip.write(_file)
             logger.info(f"deleting {_file} to zip")
