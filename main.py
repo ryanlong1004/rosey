@@ -1,13 +1,13 @@
-import datetime
 import os
 import time
-from typing import Generator, Iterator, List
+from typing import List
 from zipfile import ZipFile
-from loguru import logger
 from pathlib import Path
 import os
 import shutil
+from loguru import logger
 from tqdm import tqdm
+import click
 
 # How many minutes in 30 days
 
@@ -35,47 +35,41 @@ def remove(_path: Path) -> None:
         shutil.rmtree(_path)
 
 
-def get_str_date(ts):
-    """convenience for human readable dates from timestamps"""
-    return datetime.datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-
-
-def get_download_directory():
-    """returns path of home directory"""
-
-    return DOWNLOAD_DIRECTORY
-
-
 def get_folder_items(_path: Path) -> List[Path]:
     """returns a list of files and folder from a directory"""
     root, folders, files = next(os.walk(_path))
     return [Path(os.path.join(Path(root, (x)))) for x in folders + files]
 
 
-def is_archivable(_path: Path) -> bool:
+def is_archivable(_path: Path, age: int) -> bool:
     """return true if _path is archivable"""
-    test = time.time() - (30 * DAY)
+    test = time.time() - (age * DAY)
     actual = os.path.getmtime(_path)
     return test > actual
 
 
-def main():
-    """main point of execution"""
+@click.command()
+@click.option("--age", default=30, help="archive age in days")
+@click.option("--dryrun/--no-dryrun", default=False)
+def archive(age, dryrun):
+    """Archive items in Download folder older than [AGE].  Defaults to 30 days."""
     logger.info("starting")
     archivable = [
         item
-        for item in get_folder_items(get_download_directory())
-        if is_archivable(item)
+        for item in get_folder_items(DOWNLOAD_DIRECTORY)
+        if is_archivable(item, age)
     ]
 
-    archive_path = os.path.join(get_download_directory(), "archive.zip")
-    with ZipFile(archive_path, "w") as myzip:
+    archive_path = os.path.join(DOWNLOAD_DIRECTORY, "archive.zip")
+    with ZipFile(archive_path, "a") as myzip:
         for _file in tqdm(archivable):
             logger.info(f"writing {_file} to zip")
-            myzip.write(_file)
+            if not dryrun:
+                myzip.write(_file)
             logger.info(f"deleting {_file} to zip")
-            remove(_file)
+            if not dryrun:
+                remove(_file)
 
 
 if __name__ == "__main__":
-    main()
+    archive()
